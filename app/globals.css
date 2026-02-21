@@ -1,0 +1,98 @@
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-syne: 'Syne', system-ui, sans-serif;
+  --font-instrument: 'Instrument Serif', Georgia, serif;
+  --font-jetbrains: 'JetBrains Mono', monospace;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  background: #07070a;
+  color: #e8e6e3;
+  font-family: var(--font-jetbrains);
+  font-weight: 300;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Film grain overlay */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #07070a; }
+::-webkit-scrollbar-thumb { background: #333345; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #c9a55a; }
+
+/* Selection */
+::selection { background: #c9a55a33; color: #c9a55a; }
+
+/* Section dividers */
+.section-line {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #333345, transparent);
+}
+
+/* Glow effects */
+.glow-gold { box-shadow: 0 0 40px #c9a55a15; }
+.glow-gold-hover:hover { box-shadow: 0 0 40px #c9a55a25; }
+
+/* Card hover */
+.card-lift {
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+}
+.card-lift:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 40px rgba(201, 165, 90, 0.08);
+  border-color: #c9a55a;
+}
+
+/* Staggered animation */
+.stagger-1 { animation-delay: 0.1s; }
+.stagger-2 { animation-delay: 0.2s; }
+.stagger-3 { animation-delay: 0.3s; }
+.stagger-4 { animation-delay: 0.4s; }
+.stagger-5 { animation-delay: 0.5s; }
+
+/* Tag pill */
+.tag {
+  @apply text-[10px] uppercase tracking-[0.12em] px-2.5 py-0.5 border;
+  background: #16161b;
+  border-color: #222230;
+  color: #888898;
+}
+
+/* Pull score indicator */
+.pull-bar {
+  height: 3px;
+  background: linear-gradient(90deg, #c9a55a, #5ab8c9);
+  border-radius: 2px;
+  transition: width 0.5s ease;
+}
+
+/* Video hover play */
+video.hover-play { cursor: pointer; }
+
+/* Lightbox */
+.lightbox-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.94);
+  backdrop-filter: blur(20px);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
