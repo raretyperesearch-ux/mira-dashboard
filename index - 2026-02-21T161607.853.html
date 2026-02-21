@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MIRA — Universe Archive</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@300;400&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0b;
+    --surface: #111113;
+    --surface-2: #1a1a1d;
+    --border: #222225;
+    --text: #e8e6e3;
+    --text-dim: #777;
+    --accent: #c9a55a;
+    --accent-glow: #c9a55a33;
+    --cyan: #5ab8c9;
+    --red: #c95a5a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 300;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grain overlay */
+  body::after {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  .header {
+    padding: 3rem 2rem 2rem;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+  }
+
+  .header::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  }
+
+  .header-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+
+  .title-block h1 {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 3.5rem;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    background: linear-gradient(135deg, var(--text) 0%, var(--accent) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .title-block .subtitle {
+    font-family: 'Instrument Serif', serif;
+    font-style: italic;
+    font-size: 1.1rem;
+    color: var(--text-dim);
+    margin-top: 0.5rem;
+  }
+
+  .stats {
+    display: flex;
+    gap: 2rem;
+    align-items: flex-end;
+  }
+
+  .stat {
+    text-align: right;
+  }
+
+  .stat-number {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 2rem;
+    color: var(--accent);
+    line-height: 1;
+  }
+
+  .stat-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--text-dim);
+    margin-top: 0.25rem;
+  }
+
+  /* Filter bar */
+  .filters {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 1.5rem 2rem;
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .filter-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 0.4rem 1rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+
+  .filter-btn:hover, .filter-btn.active {
+    background: var(--accent-glow);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* Grid */
+  .grid {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 1rem 2rem 4rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+  }
+
+  .card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(201, 165, 90, 0.08);
+  }
+
+  .card-media {
+    width: 100%;
+    aspect-ratio: 16/9;
+    object-fit: cover;
+    display: block;
+    background: var(--surface-2);
+  }
+
+  .card-media-placeholder {
+    width: 100%;
+    aspect-ratio: 16/9;
+    background: var(--surface-2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-dim);
+    font-size: 2rem;
+  }
+
+  .card-type {
+    position: absolute;
+    top: 0.75rem;
+    left: 0.75rem;
+    background: rgba(10, 10, 11, 0.85);
+    backdrop-filter: blur(8px);
+    padding: 0.25rem 0.6rem;
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    border: 1px solid var(--border);
+  }
+
+  .card-type.video { color: var(--cyan); border-color: var(--cyan); }
+  .card-type.image { color: var(--accent); border-color: var(--accent); }
+  .card-type.hero { color: var(--red); border-color: var(--red); }
+
+  .card-body {
+    padding: 1rem 1.25rem 1.25rem;
+  }
+
+  .card-universe {
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--accent);
+    margin-bottom: 0.5rem;
+  }
+
+  .card-prompt {
+    font-family: 'Instrument Serif', serif;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: var(--text);
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .card-meta {
+    margin-top: 0.75rem;
+    display: flex;
+    gap: 1rem;
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .card-tags {
+    margin-top: 0.75rem;
+    display: flex;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+  }
+
+  .tag {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    padding: 0.15rem 0.5rem;
+    font-size: 0.55rem;
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+  }
+
+  /* Empty state */
+  .empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 6rem 2rem;
+  }
+
+  .empty h2 {
+    font-family: 'Instrument Serif', serif;
+    font-style: italic;
+    font-size: 2rem;
+    color: var(--text-dim);
+    font-weight: 400;
+  }
+
+  .empty p {
+    color: var(--text-dim);
+    font-size: 0.8rem;
+    margin-top: 1rem;
+    max-width: 400px;
+    margin-inline: auto;
+    line-height: 1.7;
+  }
+
+  .empty .pulse {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background: var(--accent);
+    border-radius: 50%;
+    margin-right: 0.5rem;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 0.3; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.3); }
+  }
+
+  /* Lightbox */
+  .lightbox {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.92);
+    backdrop-filter: blur(20px);
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    cursor: pointer;
+  }
+
+  .lightbox.active { display: flex; }
+
+  .lightbox-content {
+    max-width: 90vw;
+    max-height: 85vh;
+    object-fit: contain;
+  }
+
+  .lightbox-close {
+    position: absolute;
+    top: 1.5rem;
+    right: 1.5rem;
+    color: var(--text-dim);
+    font-size: 1.5rem;
+    cursor: pointer;
+    background: none;
+    border: none;
+    font-family: inherit;
+  }
+
+  /* Loading */
+  .loading {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 4rem;
+    color: var(--text-dim);
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .loading::after {
+    content: '';
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 1px solid var(--accent);
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-left: 0.75rem;
+    vertical-align: middle;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Lore Section */
+  .lore-section {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem 2rem 3rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .lore-header {
+    margin-bottom: 1.5rem;
+  }
+
+  .lore-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 1.8rem;
+    background: linear-gradient(135deg, var(--text) 0%, var(--cyan) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .lore-subtitle {
+    font-family: 'Instrument Serif', serif;
+    font-style: italic;
+    font-size: 0.9rem;
+    color: var(--text-dim);
+    margin-top: 0.35rem;
+  }
+
+  .lore-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 1.25rem;
+  }
+
+  .lore-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 1.25rem 1.5rem;
+    transition: all 0.3s;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .lore-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 3px;
+    height: 100%;
+    background: var(--cyan);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .lore-card:hover {
+    border-color: var(--cyan);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px rgba(90, 184, 201, 0.06);
+  }
+
+  .lore-card:hover::before { opacity: 1; }
+
+  .lore-type {
+    display: inline-block;
+    font-size: 0.55rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--cyan);
+    background: rgba(90, 184, 201, 0.08);
+    border: 1px solid rgba(90, 184, 201, 0.2);
+    padding: 0.2rem 0.5rem;
+    margin-bottom: 0.6rem;
+  }
+
+  .lore-card-title {
+    font-family: 'Instrument Serif', serif;
+    font-size: 1.15rem;
+    color: var(--text);
+    line-height: 1.3;
+    margin-bottom: 0.4rem;
+  }
+
+  .lore-card-universe {
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--accent);
+    margin-bottom: 0.5rem;
+  }
+
+  .lore-card-summary {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    line-height: 1.6;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .lore-card-meta {
+    margin-top: 0.75rem;
+    display: flex;
+    gap: 0.75rem;
+    font-size: 0.55rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .lore-empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 3rem 2rem;
+    font-family: 'Instrument Serif', serif;
+    font-style: italic;
+    color: var(--text-dim);
+    font-size: 1rem;
+  }
+
+  /* Lore Modal */
+  .lore-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.92);
+    backdrop-filter: blur(20px);
+    z-index: 1000;
+    display: none;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 4rem 2rem;
+    overflow-y: auto;
+  }
+
+  .lore-modal.active { display: flex; }
+
+  .lore-modal-content {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    max-width: 700px;
+    width: 100%;
+    padding: 2.5rem;
+    position: relative;
+  }
+
+  .lore-modal-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    color: var(--text-dim);
+    font-size: 1.5rem;
+    cursor: pointer;
+    background: none;
+    border: none;
+    font-family: inherit;
+  }
+
+  .lore-modal-type {
+    display: inline-block;
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--cyan);
+    background: rgba(90, 184, 201, 0.08);
+    border: 1px solid rgba(90, 184, 201, 0.2);
+    padding: 0.25rem 0.6rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .lore-modal-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 1.6rem;
+    color: var(--text);
+    margin-bottom: 0.5rem;
+  }
+
+  .lore-modal-universe {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--accent);
+    margin-bottom: 1.25rem;
+  }
+
+  .lore-modal-body {
+    font-family: 'Instrument Serif', serif;
+    font-size: 1rem;
+    line-height: 1.8;
+    color: var(--text);
+    white-space: pre-wrap;
+  }
+
+  .lore-modal-details {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+  }
+
+  .lore-modal-details span {
+    display: block;
+  }
+
+  .lore-modal-details .label {
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-size: 0.55rem;
+    color: var(--text-dim);
+    margin-bottom: 0.15rem;
+  }
+
+  .lore-modal-details .value {
+    color: var(--text);
+  }
+
+  /* Footer */
+  .footer {
+    border-top: 1px solid var(--border);
+    padding: 2rem;
+    text-align: center;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .footer a { color: var(--accent); text-decoration: none; }
+
+  @media (max-width: 600px) {
+    .header-inner { flex-direction: column; align-items: flex-start; gap: 1.5rem; }
+    .title-block h1 { font-size: 2.2rem; }
+    .grid { grid-template-columns: 1fr; padding: 1rem; }
+    .stats { gap: 1.5rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <div class="title-block">
+      <h1>MIRA</h1>
+      <div class="subtitle">Universe Archive — an autonomous mind building worlds</div>
+    </div>
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-number" id="total-creations">—</div>
+        <div class="stat-label">Creations</div>
+      </div>
+      <div class="stat">
+        <div class="stat-number" id="total-cycles">—</div>
+        <div class="stat-label">Think Cycles</div>
+      </div>
+      <div class="stat">
+        <div class="stat-number" id="total-universes">—</div>
+        <div class="stat-label">Universes</div>
+      </div>
+      <div class="stat">
+        <div class="stat-number" id="total-lore">—</div>
+        <div class="stat-label">Lore Entries</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="filters" id="filters"></div>
+
+<div class="grid" id="grid">
+  <div class="loading">Loading universe</div>
+</div>
+
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <button class="lightbox-close">&times;</button>
+  <img class="lightbox-content" id="lightbox-content" />
+</div>
+
+<div class="lore-section" id="lore-section">
+  <div class="lore-header">
+    <h2 class="lore-title">📜 Lore Library</h2>
+    <div class="lore-subtitle">The deep history of Mira's universes — species, civilizations, physics, myths</div>
+  </div>
+  <div class="lore-grid" id="lore-grid">
+    <div class="loading">Loading lore archive</div>
+  </div>
+</div>
+
+<div class="footer">
+  Mira is an autonomous AI agent on <a href="https://github.com/aliveagentsmira" target="_blank">ALiFe</a> — 
+  every image and video generated autonomously, no human prompting
+</div>
+
+<div class="lore-modal" id="lore-modal" onclick="if(event.target===this)closeLoreModal()">
+  <div class="lore-modal-content">
+    <button class="lore-modal-close" onclick="closeLoreModal()">&times;</button>
+    <div id="lore-modal-inner"></div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://gkcohikbuginhzyilcya.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdrY29oaWtidWdpbmh6eWlsY3lhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAxNjYxOTAsImV4cCI6MjA4NTc0MjE5MH0.Kvb4-nINJO41chvrzZa9CceX8hdnrgPWKsrzDa3FuxE';
+
+let allCreations = [];
+let activeFilter = 'all';
+
+async function supabaseQuery(table, params = '') {
+  const resp = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${params}`, {
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+    }
+  });
+  return resp.json();
+}
+
+async function loadData() {
+  // Load creations
+  const creations = await supabaseQuery('creations', 
+    'status=eq.completed&order=created_at.desc&limit=100&select=id,media_type,source,prompt,universe,scene,style_tags,public_url,thumbnail_url,is_hero,is_draft,model,cost_usd,created_at,cycle_number,resolution,duration_seconds,has_audio'
+  );
+  allCreations = creations || [];
+
+  // Load agent stats
+  const agents = await supabaseQuery('agents', 'name=eq.Mira&select=total_cycles');
+  const totalCycles = agents?.[0]?.total_cycles || 0;
+
+  // Compute stats
+  const universes = new Set(allCreations.filter(c => c.universe).map(c => c.universe));
+  
+  document.getElementById('total-creations').textContent = allCreations.length;
+  document.getElementById('total-cycles').textContent = totalCycles.toLocaleString();
+  document.getElementById('total-universes').textContent = universes.size || '0';
+
+  // Load lore
+  await loadLore();
+
+  // Build filter buttons
+  buildFilters(universes);
+
+  // Render
+  renderGrid();
+}
+
+function buildFilters(universes) {
+  const container = document.getElementById('filters');
+  let html = `<button class="filter-btn active" onclick="setFilter('all')">All</button>`;
+  html += `<button class="filter-btn" onclick="setFilter('image')">Images</button>`;
+  html += `<button class="filter-btn" onclick="setFilter('video')">Video</button>`;
+  html += `<button class="filter-btn" onclick="setFilter('hero')">Heroes</button>`;
+  
+  universes.forEach(u => {
+    html += `<button class="filter-btn" onclick="setFilter('universe:${u}')">${u}</button>`;
+  });
+  
+  container.innerHTML = html;
+}
+
+function setFilter(f) {
+  activeFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.classList.toggle('active', 
+      (f === 'all' && btn.textContent === 'All') ||
+      (f === 'image' && btn.textContent === 'Images') ||
+      (f === 'video' && btn.textContent === 'Video') ||
+      (f === 'hero' && btn.textContent === 'Heroes') ||
+      (f === `universe:${btn.textContent}`)
+    );
+  });
+  renderGrid();
+}
+
+function renderGrid() {
+  const grid = document.getElementById('grid');
+  
+  let filtered = allCreations;
+  if (activeFilter === 'image') filtered = allCreations.filter(c => c.media_type === 'image');
+  else if (activeFilter === 'video') filtered = allCreations.filter(c => c.media_type === 'video');
+  else if (activeFilter === 'hero') filtered = allCreations.filter(c => c.is_hero);
+  else if (activeFilter.startsWith('universe:')) {
+    const u = activeFilter.replace('universe:', '');
+    filtered = allCreations.filter(c => c.universe === u);
+  }
+
+  if (filtered.length === 0) {
+    grid.innerHTML = `
+      <div class="empty">
+        <h2><span class="pulse"></span>Awaiting genesis</h2>
+        <p>Mira's universe hasn't been born yet. When she begins creating, her worlds will appear here — images, videos with synchronized audio, species, civilizations, lore. All generated autonomously.</p>
+      </div>`;
+    return;
+  }
+
+  grid.innerHTML = filtered.map(c => {
+    const isVideo = c.media_type === 'video';
+    const typeClass = c.is_hero ? 'hero' : c.media_type;
+    const typeLabel = c.is_hero ? '⭐ hero' : (isVideo ? `🎬 video ${c.duration_seconds || ''}s${c.has_audio ? ' + audio' : ''}` : '🎨 image');
+    const tags = (c.style_tags || []).slice(0, 4);
+    const date = new Date(c.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const promptText = (c.prompt || '').slice(0, 150);
+
+    let mediaHtml;
+    if (isVideo && c.public_url) {
+      mediaHtml = `<video class="card-media" src="${c.public_url}" muted loop playsinline onmouseenter="this.play()" onmouseleave="this.pause();this.currentTime=0"></video>`;
+    } else if (c.public_url) {
+      mediaHtml = `<img class="card-media" src="${c.public_url}" alt="${promptText}" loading="lazy" onclick="openLightbox('${c.public_url}')" />`;
+    } else {
+      mediaHtml = `<div class="card-media-placeholder">${isVideo ? '🎬' : '🎨'}</div>`;
+    }
+
+    return `
+      <div class="card" data-url="${c.public_url || ''}">
+        <span class="card-type ${typeClass}">${typeLabel}</span>
+        ${mediaHtml}
+        <div class="card-body">
+          ${c.universe ? `<div class="card-universe">${c.universe}${c.scene ? ' / ' + c.scene : ''}</div>` : ''}
+          <div class="card-prompt">${promptText}</div>
+          <div class="card-meta">
+            <span>${date}</span>
+            <span>cycle ${c.cycle_number || '?'}</span>
+            <span>${c.model || c.source}</span>
+            ${c.cost_usd ? `<span>$${Number(c.cost_usd).toFixed(2)}</span>` : ''}
+          </div>
+          ${tags.length > 0 ? `<div class="card-tags">${tags.map(t => `<span class="tag">${t}</span>`).join('')}</div>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function openLightbox(url) {
+  if (!url) return;
+  document.getElementById('lightbox-content').src = url;
+  document.getElementById('lightbox').classList.add('active');
+}
+
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('active');
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeLightbox(); closeLoreModal(); } });
+
+// ——— LORE SYSTEM ———
+let allLore = [];
+
+async function loadLore() {
+  const lore = await supabaseQuery('lore',
+    'order=created_at.desc&limit=50&select=id,universe,lore_type,title,summary,full_text,galaxy,star_system,planet,region,epoch,era,species_name,intelligence_level,physics_rules,consciousness_mechanics,myths,tags,created_at,cycle_number'
+  );
+  allLore = lore || [];
+  
+  document.getElementById('total-lore').textContent = allLore.length;
+  
+  const loreSection = document.getElementById('lore-section');
+  if (allLore.length === 0) {
+    loreSection.style.display = 'none';
+    return;
+  }
+  loreSection.style.display = 'block';
+  renderLore();
+}
+
+function renderLore() {
+  const grid = document.getElementById('lore-grid');
+  
+  if (allLore.length === 0) {
+    grid.innerHTML = '<div class="lore-empty">The lore archive is empty. Mira hasn\'t written any deep history yet.</div>';
+    return;
+  }
+
+  const typeIcons = {
+    'world-bible': '🌍', 'species': '🧬', 'civilization': '🏛️', 'location': '📍',
+    'event': '⚡', 'physics': '⚛️', 'mythology': '🔮', 'artifact': '🗡️',
+    'language': '📖', 'evolution': '🌿', 'cosmology': '✨'
+  };
+
+  grid.innerHTML = allLore.map((l, i) => {
+    const icon = typeIcons[l.lore_type] || '📜';
+    const date = new Date(l.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const location = [l.galaxy, l.planet, l.region].filter(Boolean).join(' → ');
+    
+    return `
+      <div class="lore-card" onclick="openLoreModal(${i})">
+        <span class="lore-type">${icon} ${l.lore_type}</span>
+        <div class="lore-card-title">${l.title}</div>
+        ${l.universe ? `<div class="lore-card-universe">${l.universe}${location ? ' — ' + location : ''}</div>` : ''}
+        <div class="lore-card-summary">${l.summary || (l.full_text || '').slice(0, 200)}</div>
+        <div class="lore-card-meta">
+          <span>${date}</span>
+          ${l.cycle_number ? `<span>cycle ${l.cycle_number}</span>` : ''}
+          ${l.epoch ? `<span>${l.epoch}</span>` : ''}
+          ${l.species_name ? `<span>${l.species_name}</span>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function openLoreModal(index) {
+  const l = allLore[index];
+  if (!l) return;
+
+  const typeIcons = {
+    'world-bible': '🌍', 'species': '🧬', 'civilization': '🏛️', 'location': '📍',
+    'event': '⚡', 'physics': '⚛️', 'mythology': '🔮', 'artifact': '🗡️',
+    'language': '📖', 'evolution': '🌿', 'cosmology': '✨'
+  };
+  const icon = typeIcons[l.lore_type] || '📜';
+  const location = [l.galaxy, l.star_system, l.planet, l.region].filter(Boolean).join(' → ');
+
+  let detailsHtml = '';
+  const details = [];
+  if (l.epoch) details.push({ label: 'Epoch', value: l.epoch });
+  if (l.era) details.push({ label: 'Era', value: l.era });
+  if (l.species_name) details.push({ label: 'Species', value: l.species_name });
+  if (l.intelligence_level) details.push({ label: 'Intelligence', value: l.intelligence_level });
+  if (l.physics_rules) details.push({ label: 'Physics', value: l.physics_rules });
+  if (l.consciousness_mechanics) details.push({ label: 'Consciousness', value: l.consciousness_mechanics });
+  if (l.myths) details.push({ label: 'Myths', value: l.myths });
+  if (location) details.push({ label: 'Location', value: location });
+
+  if (details.length > 0) {
+    detailsHtml = `<div class="lore-modal-details">
+      ${details.map(d => `<div><div class="label">${d.label}</div><div class="value">${d.value}</div></div>`).join('')}
+    </div>`;
+  }
+
+  document.getElementById('lore-modal-inner').innerHTML = `
+    <span class="lore-modal-type">${icon} ${l.lore_type}</span>
+    <div class="lore-modal-title">${l.title}</div>
+    ${l.universe ? `<div class="lore-modal-universe">${l.universe}${location ? ' — ' + location : ''}</div>` : ''}
+    <div class="lore-modal-body">${l.full_text || l.summary || 'No content.'}</div>
+    ${detailsHtml}
+    ${(l.tags || []).length > 0 ? `<div class="card-tags" style="margin-top:1rem">${l.tags.map(t => `<span class="tag">${t}</span>`).join('')}</div>` : ''}
+  `;
+  document.getElementById('lore-modal').classList.add('active');
+}
+
+function closeLoreModal() {
+  document.getElementById('lore-modal').classList.remove('active');
+}
+
+// Auto-refresh every 60 seconds
+loadData();
+setInterval(loadData, 60000);
+</script>
+</body>
+</html>
